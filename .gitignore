@@ -33,6 +33,12 @@ wheels/
 *.swo
 *~
 
+# Node
+node_modules/
+
+# Data
+*.db
+
 # OS
 .DS_Store
 Thumbs.db
