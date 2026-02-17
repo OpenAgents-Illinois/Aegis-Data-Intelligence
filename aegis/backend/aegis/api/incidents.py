@@ -1,8 +1,10 @@
 """Incident listing, detail, approval, and dismissal endpoints."""
 
+import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -54,6 +56,19 @@ async def get_incident(incident_id: int, db: AsyncSession = Depends(get_db)):
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
     return IncidentResponse.from_orm_model(incident)
+
+
+@router.get("/{incident_id}/report")
+async def get_incident_report(incident_id: int, db: AsyncSession = Depends(get_db)):
+    """Return the structured incident report."""
+    incident = await db.get(IncidentModel, incident_id)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    if not incident.report:
+        return JSONResponse(status_code=204, content=None)
+
+    return json.loads(incident.report)
 
 
 @router.post("/{incident_id}/approve", response_model=IncidentResponse)
