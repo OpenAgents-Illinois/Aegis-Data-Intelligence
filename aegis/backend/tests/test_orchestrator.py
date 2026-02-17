@@ -101,6 +101,22 @@ class TestOrchestrator:
 
         assert incident2.id != incident1.id
 
+    def test_incident_has_report_after_creation(self, db, sample_anomaly):
+        orchestrator = Orchestrator(_mock_architect(), _mock_executor())
+        incident = orchestrator.handle_anomaly(sample_anomaly, db)
+
+        assert incident.report is not None
+        import json
+        report_data = json.loads(incident.report)
+        assert report_data["incident_id"] == incident.id
+        assert "title" in report_data
+        assert "summary" in report_data
+        assert "anomaly_details" in report_data
+        assert "root_cause" in report_data
+        assert "blast_radius" in report_data
+        assert "recommended_actions" in report_data
+        assert "timeline" in report_data
+
     def test_notifier_called_on_incident_creation(self, db, sample_anomaly):
         notifier = MagicMock()
         orchestrator = Orchestrator(_mock_architect(), _mock_executor(), notifier=notifier)

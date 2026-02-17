@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 
 from aegis.agents.architect import Architect
 from aegis.agents.executor import Executor
-from aegis.core.models import AnomalyModel, IncidentModel
+from aegis.agents.report_generator import ReportGenerator
+from aegis.core.models import AnomalyModel, IncidentModel, MonitoredTableModel, Remediation
 
 logger = logging.getLogger("aegis.orchestrator")
 
@@ -76,10 +77,27 @@ class Orchestrator:
 
         # 5. Update status
         incident.status = "pending_review"
+
+        # 6. Generate incident report
+        try:
+            table = db.get(MonitoredTableModel, anomaly.table_id)
+            diag_obj = None
+            if incident.diagnosis:
+                diag_obj = Diagnosis.model_validate_json(incident.diagnosis)
+            remed_obj = None
+            if incident.remediation:
+                remed_obj = Remediation.model_validate_json(incident.remediation)
+
+            generator = ReportGenerator()
+            report = generator.generate(incident, anomaly, table, diag_obj, remed_obj)
+            incident.report = report.model_dump_json()
+        except Exception:
+            logger.exception("Report generation failed for incident %d", incident.id)
+
         incident.updated_at = datetime.now(timezone.utc)
         db.flush()
 
-        # 6. Notify dashboard
+        # 7. Notify dashboard
         if self.notifier:
             self.notifier.broadcast(
                 "incident.created",
