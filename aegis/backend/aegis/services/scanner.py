@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from aegis.agents.architect import Architect
 from aegis.agents.executor import Executor
+from aegis.agents.investigator import Investigator
 from aegis.agents.orchestrator import Orchestrator
 from aegis.agents.sentinel import FreshnessSentinel, SchemaSentinel
 from aegis.config import settings
@@ -32,6 +33,7 @@ async def _scan_loop():
     interval = settings.scan_interval_seconds
     lineage_interval = settings.lineage_refresh_seconds
     last_lineage_refresh = 0.0
+    last_rediscovery = 0.0
 
     while True:
         try:
@@ -49,6 +51,14 @@ async def _scan_loop():
                 last_lineage_refresh = now
             except Exception:
                 logger.exception("Lineage refresh failed")
+
+        # Rediscovery on its own cadence
+        if now - last_rediscovery >= settings.rediscovery_interval_seconds:
+            try:
+                await asyncio.to_thread(_run_rediscovery)
+                last_rediscovery = now
+            except Exception:
+                logger.exception("Rediscovery failed")
 
         await asyncio.sleep(interval)
 
@@ -144,6 +154,38 @@ def _run_lineage_refresh():
                 logger.exception("Lineage refresh failed for %s", conn_model.name)
 
         logger.info("Lineage refresh complete: %d edges updated", total_edges)
+
+
+def _run_rediscovery():
+    """Detect new/dropped tables across all active connections."""
+    from aegis.services.notifier import notifier
+
+    with SyncSessionLocal() as db:
+        connections = db.execute(
+            select(ConnectionModel).where(ConnectionModel.is_active.is_(True))
+        ).scalars().all()
+
+        investigator = Investigator()
+        total_deltas = 0
+
+        for conn_model in connections:
+            try:
+                connector = WarehouseConnector(conn_model.connection_uri, conn_model.dialect)
+                deltas = investigator.rediscover(connector, db, conn_model.id)
+                total_deltas += len(deltas)
+                connector.dispose()
+
+                if deltas:
+                    logger.info(
+                        "Rediscovery found %d changes for %s",
+                        len(deltas),
+                        conn_model.name,
+                    )
+            except Exception:
+                logger.exception("Rediscovery failed for %s", conn_model.name)
+
+        notifier.broadcast("discovery.update", {"total_deltas": total_deltas})
+        logger.info("Rediscovery complete: %d total deltas", total_deltas)
 
 
 def run_manual_scan():
