@@ -18,14 +18,12 @@ jobs:
             const repo = context.repo.repo;
             const pr = context.issue.number;
 
-            // Auto-assign ownership
             await github.rest.issues.addAssignees({
               owner, repo,
               issue_number: pr,
-              assignees: ['kidskoding', 'ashcastelinocs124']
+              assignees: [context.payload.pull_request.user.login]
             });
 
-            // Auto-request reviews (strictly these two)
             await github.rest.pulls.requestReviewers({
               owner, repo,
               pull_number: pr,
