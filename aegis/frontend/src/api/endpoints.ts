@@ -2,10 +2,12 @@ import client from "./client";
 import type {
   Connection,
   Incident,
+  IncidentReport,
   LineageGraph,
   MonitoredTable,
   Stats,
   BlastRadius,
+  TableProposal,
 } from "./types";
 
 // --- Connections ---
@@ -24,6 +26,19 @@ export const deleteConnection = (id: number) =>
 export const testConnection = (id: number) =>
   client
     .post<{ success: boolean }>(`/connections/${id}/test`)
+    .then((r) => r.data);
+
+export const discoverTables = (id: number) =>
+  client.post<{ proposals: TableProposal[] }>(`/connections/${id}/discover`).then((r) => r.data);
+
+export const confirmDiscovery = (
+  id: number,
+  tableSelections: { schema_name: string; table_name: string; check_types: string[]; freshness_sla_minutes: number | null }[]
+) =>
+  client
+    .post<{ enrolled: unknown[]; total: number }>(`/connections/${id}/discover/confirm`, {
+      table_selections: tableSelections,
+    })
     .then((r) => r.data);
 
 // --- Tables ---
@@ -60,9 +75,16 @@ export const dismissIncident = (id: number, reason: string) =>
     .post<Incident>(`/incidents/${id}/dismiss`, { reason })
     .then((r) => r.data);
 
+export const getIncidentReport = (id: number) =>
+  client
+    .get<IncidentReport>(`/incidents/${id}/report`, {
+      validateStatus: (s) => s === 200 || s === 204,
+    })
+    .then((r) => (r.status === 204 ? null : r.data));
+
 // --- Lineage ---
-export const getLineageGraph = () =>
-  client.get<LineageGraph>("/lineage/graph").then((r) => r.data);
+export const getLineageGraph = (params?: { connection_id?: number }) =>
+  client.get<LineageGraph>("/lineage/graph", { params }).then((r) => r.data);
 
 export const getBlastRadius = (table: string) =>
   client.get<BlastRadius>(`/lineage/${table}/blast-radius`).then((r) => r.data);

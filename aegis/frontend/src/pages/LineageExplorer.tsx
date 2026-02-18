@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
 import { useLineageStore } from "../stores/lineageStore";
+import { getConnections } from "../api/endpoints";
+import type { Connection } from "../api/types";
 import LineageGraphComponent from "../components/LineageGraph";
 
 export default function LineageExplorer() {
   const { graph, loading, fetchGraph } = useLineageStore();
   const [search, setSearch] = useState("");
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<number | undefined>(undefined);
 
   useEffect(() => {
-    fetchGraph();
-  }, [fetchGraph]);
+    getConnections().then(setConnections).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchGraph(selectedConnectionId);
+  }, [selectedConnectionId, fetchGraph]);
 
   const filteredHighlight = search.trim()
     ? graph?.nodes.find((n) =>
@@ -28,7 +36,23 @@ export default function LineageExplorer() {
   if (!graph || graph.nodes.length === 0) {
     return (
       <div className="space-y-4">
-        <h2 className="text-2xl font-semibold text-gray-900">Lineage Explorer</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-gray-900">Lineage Explorer</h2>
+          {connections.length > 0 && (
+            <select
+              value={selectedConnectionId ?? ""}
+              onChange={(e) =>
+                setSelectedConnectionId(e.target.value ? Number(e.target.value) : undefined)
+              }
+              className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">All connections</option>
+              {connections.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
         <div className="text-gray-400 text-center py-20 bg-white border border-gray-200 rounded-lg">
           No lineage data yet. Add a warehouse connection and wait for the
           lineage refresh cycle.
@@ -45,6 +69,20 @@ export default function LineageExplorer() {
           <span className="text-sm text-gray-500">
             {graph.nodes.length} tables, {graph.edges.length} edges
           </span>
+          {connections.length > 0 && (
+            <select
+              value={selectedConnectionId ?? ""}
+              onChange={(e) =>
+                setSelectedConnectionId(e.target.value ? Number(e.target.value) : undefined)
+              }
+              className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">All connections</option>
+              {connections.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}

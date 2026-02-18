@@ -109,7 +109,60 @@ export interface Stats {
   avg_resolution_time_minutes: number | null;
 }
 
+export interface AnomalyDetail {
+  type: string;
+  table: string;
+  detected_at: string;
+  changes: Record<string, unknown>[];
+}
+
+export interface RootCauseDetail {
+  explanation: string;
+  source_table: string;
+  confidence: number;
+}
+
+export interface BlastRadiusDetail {
+  total_affected: number;
+  affected_tables: string[];
+}
+
+export interface RecommendedAction {
+  action: string;
+  description: string;
+  priority: number;
+  status: string;
+}
+
+export interface TimelineEvent {
+  timestamp: string;
+  event: string;
+}
+
+export interface IncidentReport {
+  incident_id: number;
+  title: string;
+  severity: string;
+  status: string;
+  generated_at: string;
+  summary: string;
+  anomaly_details: AnomalyDetail;
+  root_cause: RootCauseDetail;
+  blast_radius: BlastRadiusDetail;
+  recommended_actions: RecommendedAction[];
+  timeline: TimelineEvent[];
+}
+
 export interface WsEvent {
   event: string;
   data: Record<string, unknown>;
+}
+
+export interface TableProposal {
+  schema_name: string;
+  table_name: string;
+  classification: string;
+  check_types: string[];
+  freshness_sla_minutes: number | null;
+  rationale: string;
 }

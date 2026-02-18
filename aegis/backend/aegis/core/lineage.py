@@ -70,17 +70,33 @@ class LineageGraph:
 
         return None
 
-    def get_full_graph(self) -> dict[str, Any]:
-        """Return all nodes and edges for visualization."""
+    def get_full_graph(self, connection_id: int | None = None) -> dict[str, Any]:
+        """Return all nodes and edges for visualization, optionally filtered by connection."""
+        from aegis.core.models import MonitoredTableModel
+
         cutoff = datetime.now(timezone.utc) - timedelta(days=STALE_DAYS)
 
         stmt = select(LineageEdgeModel).where(LineageEdgeModel.last_seen_at >= cutoff)
         edges = self.db.execute(stmt).scalars().all()
 
+        # If filtering by connection, get that connection's table names
+        allowed_tables: set[str] | None = None
+        if connection_id is not None:
+            table_stmt = (
+                select(MonitoredTableModel.fully_qualified_name)
+                .where(MonitoredTableModel.connection_id == connection_id)
+            )
+            allowed_tables = {
+                row[0] for row in self.db.execute(table_stmt).all()
+            }
+
         nodes: set[str] = set()
         edge_list: list[dict[str, Any]] = []
 
         for edge in edges:
+            if allowed_tables is not None:
+                if edge.source_table not in allowed_tables and edge.target_table not in allowed_tables:
+                    continue
             nodes.add(edge.source_table)
             nodes.add(edge.target_table)
             edge_list.append({

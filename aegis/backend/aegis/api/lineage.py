@@ -15,9 +15,9 @@ def _get_lineage_graph() -> LineageGraph:
 
 
 @router.get("/graph")
-async def get_full_graph():
+async def get_full_graph(connection_id: int | None = Query(None)):
     graph = _get_lineage_graph()
-    return graph.get_full_graph()
+    return graph.get_full_graph(connection_id=connection_id)
 
 
 @router.get("/{table}/upstream")

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useIncidentStore } from "../stores/incidentStore";
-import { approveIncident, dismissIncident } from "../api/endpoints";
+import { approveIncident, dismissIncident, getIncidentReport } from "../api/endpoints";
+import type { IncidentReport } from "../api/types";
 import SeverityBadge from "../components/SeverityBadge";
 import SqlBlock from "../components/SqlBlock";
 import BlastRadiusGraph from "../components/BlastRadiusGraph";
@@ -12,9 +13,13 @@ export default function IncidentDetail() {
   const { current: incident, fetchIncident, loading } = useIncidentStore();
   const [dismissReason, setDismissReason] = useState("");
   const [showDismiss, setShowDismiss] = useState(false);
+  const [report, setReport] = useState<IncidentReport | null>(null);
 
   useEffect(() => {
-    if (id) fetchIncident(Number(id));
+    if (id) {
+      fetchIncident(Number(id));
+      getIncidentReport(Number(id)).then(setReport).catch(() => setReport(null));
+    }
   }, [id, fetchIncident]);
 
   if (loading || !incident) {
@@ -52,7 +57,7 @@ export default function IncidentDetail() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-gray-900">
-            Incident #{incident.id}
+            {report ? report.title : `Incident #${incident.id}`}
           </h2>
           <div className="flex items-center gap-3 mt-2">
             <SeverityBadge severity={incident.severity} />
@@ -99,6 +104,55 @@ export default function IncidentDetail() {
             Confirm Dismiss
           </button>
         </div>
+      )}
+
+      {/* Executive Summary (from report) */}
+      {report && (
+        <section className="bg-white border border-gray-200 rounded-lg p-6 space-y-3">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Executive Summary
+          </h3>
+          <p className="text-gray-900 leading-relaxed">{report.summary}</p>
+        </section>
+      )}
+
+      {/* Anomaly Details (from report) */}
+      {report && (
+        <section className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Anomaly Details
+          </h3>
+          <div className="flex flex-wrap gap-4 text-sm">
+            <span className="text-gray-500">
+              Type:{" "}
+              <span className="text-gray-900 font-medium capitalize">
+                {report.anomaly_details.type.replace("_", " ")}
+              </span>
+            </span>
+            <span className="text-gray-500">
+              Table:{" "}
+              <span className="text-gray-900 font-medium font-mono">
+                {report.anomaly_details.table}
+              </span>
+            </span>
+            <span className="text-gray-500">
+              Detected:{" "}
+              <span className="text-gray-900 font-medium">
+                {new Date(report.anomaly_details.detected_at).toLocaleString()}
+              </span>
+            </span>
+          </div>
+          {report.anomaly_details.changes.length > 0 && (
+            <div className="space-y-2">
+              <span className="text-xs font-medium text-gray-500">Changes</span>
+              <div className="bg-gray-50 rounded-md p-3 overflow-x-auto">
+                <pre className="text-xs text-gray-700 whitespace-pre-wrap">
+                  {JSON.stringify(report.anomaly_details.changes, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
       {/* Root Cause Analysis */}
@@ -155,6 +209,31 @@ export default function IncidentDetail() {
                   {rec.sql && <SqlBlock sql={rec.sql} />}
                 </div>
               ))}
+          </div>
+        </section>
+      )}
+
+      {/* Timeline (from report) */}
+      {report && report.timeline.length > 0 && (
+        <section className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Timeline
+          </h3>
+          <div className="relative">
+            <div className="absolute left-2 top-0 bottom-0 w-px bg-gray-200" />
+            <div className="space-y-4">
+              {report.timeline.map((evt, i) => (
+                <div key={i} className="flex items-start gap-4 relative">
+                  <div className="w-4 h-4 rounded-full bg-white border-2 border-gray-300 flex-shrink-0 mt-0.5 z-10" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900">{evt.event}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(evt.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}

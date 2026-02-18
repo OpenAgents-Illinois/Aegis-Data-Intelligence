@@ -5,17 +5,18 @@ import { getLineageGraph } from "../api/endpoints";
 interface LineageState {
   graph: LineageGraph | null;
   loading: boolean;
-  fetchGraph: () => Promise<void>;
+  fetchGraph: (connectionId?: number) => Promise<void>;
 }
 
 export const useLineageStore = create<LineageState>((set) => ({
   graph: null,
   loading: false,
 
-  fetchGraph: async () => {
+  fetchGraph: async (connectionId) => {
     set({ loading: true });
     try {
-      const data = await getLineageGraph();
+      const params = connectionId ? { connection_id: connectionId } : undefined;
+      const data = await getLineageGraph(params);
       set({ graph: data });
     } finally {
       set({ loading: false });
