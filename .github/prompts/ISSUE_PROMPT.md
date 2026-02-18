@@ -32,15 +32,13 @@ All issues must follow this exact Markdown format:
 - **Context:** (e.g., package name, specific files like `cmd/gopherclaw/main.go`, or environment)
 - **Description:** (Steps to reproduce for Bugs; User stories for Feats; Reasoning for Refactors)
 
+**Reproduction (if applicable):**
+
+- [Concrete steps a student can follow to observe the bug firsthand]
+
 **Proposed Implementation:**
 
 - [Briefly describe the technical approach or logic change required]
-
-**Acceptance Criteria:**
-
-- [ ] Criterion 1 (Definition of Done)
-- [ ] Criterion 2
-- [ ] Criterion 3
 
 **Labels:** [bug, enhancement, documentation, refactor, or chore]
 
@@ -55,3 +53,11 @@ All issues must follow this exact Markdown format:
 ## 🎨 Project Tone
 
 Maintain a professional, concise, and engineering-focused tone. Prioritize "Actionable" descriptions over "Vague" descriptions.
+
+## Attribution
+
+All issues must end with the following co-authorship line:
+
+```markdown
+*Co-authored by @<github-username> and @claude*
+```
