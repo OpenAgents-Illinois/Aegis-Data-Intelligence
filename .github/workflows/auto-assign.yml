@@ -22,12 +22,12 @@ jobs:
             await github.rest.issues.addAssignees({
               owner, repo,
               issue_number: pr,
-              assignees: ['kidskoding', 'ashcastelino']
+              assignees: ['kidskoding', 'ashcastelinocs124']
             });
 
             // Auto-request reviews (strictly these two)
             await github.rest.pulls.requestReviewers({
               owner, repo,
               pull_number: pr,
-              reviewers: ['kidskoding', 'ashcastelino']
+              reviewers: ['kidskoding', 'ashcastelinocs124']
             });
