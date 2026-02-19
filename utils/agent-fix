@@ -139,6 +139,25 @@ fetch_issue() {
   [[ -n "$ISSUE_LABELS" ]] && info "Labels: $ISSUE_LABELS"
 }
 
+# ─── Step 2: Create branch ───────────────────────────────────────────────────
+create_branch() {
+  step 2 "Creating branch"
+
+  BRANCH_NAME="fix/issue-${ISSUE_NUM}"
+
+  git -C "$REPO_ROOT" checkout "$BASE_BRANCH" --quiet
+  git -C "$REPO_ROOT" pull --quiet 2>/dev/null || true
+
+  if git -C "$REPO_ROOT" show-ref --verify --quiet "refs/heads/$BRANCH_NAME"; then
+    warn "Branch $BRANCH_NAME already exists. Switching to it."
+    git -C "$REPO_ROOT" checkout "$BRANCH_NAME" --quiet
+  else
+    git -C "$REPO_ROOT" checkout -b "$BRANCH_NAME" --quiet
+  fi
+
+  ok "On branch: $BRANCH_NAME"
+}
+
 # ─── Main (placeholder — filled in by subsequent tasks) ──────────────────────
 main() {
   parse_args "$@"
@@ -146,6 +165,7 @@ main() {
   check_prereqs
 
   fetch_issue
+  create_branch
 }
 
 main "$@"
