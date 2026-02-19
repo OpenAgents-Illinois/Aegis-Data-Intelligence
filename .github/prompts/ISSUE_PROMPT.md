@@ -1,6 +1,6 @@
-# Claude Engineering Guide: Repository Management
+# AI Engineering Guide: Repository Management
 
-This document defines the standards for how Claude should interact with this repository, specifically regarding Issue Tracking and Documentation.
+This document defines the standards for how AI assistants (Claude Code or Cursor) should interact with this repository, specifically regarding Issue Tracking and Documentation.
 
 ## Issue Management Standards
 
@@ -56,8 +56,11 @@ Maintain a professional, concise, and engineering-focused tone. Prioritize "Acti
 
 ## Attribution
 
-All issues must end with the following co-authorship line:
+All issues must end with a co-authorship line that credits the user and the AI assistant that created the issue. **Use the handle that matches the tool you are running in:**
 
-```markdown
-*Co-authored by @<github-username> and @claude*
-```
+- **If you are in Cursor:**  
+  `*Co-authored by @<github-username> and @cursoragent*`
+- **If you are in Claude Code:**  
+  `*Co-authored by @<github-username> and @claude*`
+
+Replace `<github-username>` with the repository owner or the user asking for the issue.
