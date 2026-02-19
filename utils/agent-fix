@@ -207,6 +207,54 @@ fix_issue() {
   }
 }
 
+# ─── Step 4: Run tests ───────────────────────────────────────────────────────
+run_tests() {
+  step 4 "Running tests"
+
+  if [[ -z "$TEST_CMD" ]]; then
+    warn "No TEST_CMD configured. Skipping tests."
+    warn "Set TEST_CMD in .agent-fix.conf or pass --test-cmd"
+    return 0
+  fi
+
+  info "Running: $TEST_CMD"
+  local test_output
+  test_output=$(cd "$REPO_ROOT" && eval "$TEST_CMD" 2>&1) && {
+    ok "Tests passed"
+    return 0
+  }
+
+  warn "Tests failed on first attempt. Feeding errors back to Claude for retry..."
+  echo "$test_output" | tail -50
+
+  local retry_prompt
+  retry_prompt=$(cat <<RETRY
+The fix you made for issue #${ISSUE_NUM} caused test failures. Here is the test output:
+
+\`\`\`
+$(echo "$test_output" | tail -100)
+\`\`\`
+
+Please fix the code so that all tests pass. Do not commit.
+RETRY
+)
+
+  run_claude "$retry_prompt" || {
+    err "Claude retry failed. Leaving branch for manual inspection."
+    exit 1
+  }
+
+  info "Re-running tests after Claude retry..."
+  test_output=$(cd "$REPO_ROOT" && eval "$TEST_CMD" 2>&1) && {
+    ok "Tests passed after retry"
+    return 0
+  }
+
+  err "Tests still failing after retry. Leaving branch $BRANCH_NAME for manual inspection."
+  echo "$test_output" | tail -30
+  exit 1
+}
+
 # ─── Main (placeholder — filled in by subsequent tasks) ──────────────────────
 main() {
   parse_args "$@"
@@ -216,6 +264,7 @@ main() {
   fetch_issue
   create_branch
   fix_issue
+  run_tests
 }
 
 main "$@"
