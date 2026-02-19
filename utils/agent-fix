@@ -121,12 +121,31 @@ check_prereqs() {
   ok "All prerequisites met"
 }
 
+# ─── Step 1: Fetch issue ─────────────────────────────────────────────────────
+fetch_issue() {
+  step 1 "Fetching issue #$ISSUE_NUM"
+
+  local issue_json
+  issue_json=$(gh issue view "$ISSUE_NUM" --repo "$(gh repo view --json nameWithOwner -q .nameWithOwner)" --json title,body,labels 2>&1) || {
+    err "Failed to fetch issue #$ISSUE_NUM. Does it exist?"
+    exit 1
+  }
+
+  ISSUE_TITLE=$(echo "$issue_json" | jq -r '.title')
+  ISSUE_BODY=$(echo "$issue_json" | jq -r '.body // ""')
+  ISSUE_LABELS=$(echo "$issue_json" | jq -r '[.labels[].name] | join(", ")')
+
+  ok "Issue: $ISSUE_TITLE"
+  [[ -n "$ISSUE_LABELS" ]] && info "Labels: $ISSUE_LABELS"
+}
+
 # ─── Main (placeholder — filled in by subsequent tasks) ──────────────────────
 main() {
   parse_args "$@"
   load_config
   check_prereqs
-  info "Ready to fix issue #$ISSUE_NUM (base: $BASE_BRANCH, dry-run: $DRY_RUN)"
+
+  fetch_issue
 }
 
 main "$@"
