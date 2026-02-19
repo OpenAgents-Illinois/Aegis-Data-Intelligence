@@ -375,16 +375,26 @@ merge_pr() {
   info "Issue #$ISSUE_NUM should be closed automatically."
 }
 
-# ─── Main (placeholder — filled in by subsequent tasks) ──────────────────────
+# ─── Main ────────────────────────────────────────────────────────────────────
 main() {
   parse_args "$@"
   load_config
   check_prereqs
 
-  fetch_issue
-  create_branch
-  fix_issue
-  run_tests
+  info "agent-fix: Resolving issue #$ISSUE_NUM"
+  echo ""
+
+  fetch_issue       # Step 1
+  create_branch     # Step 2
+  fix_issue         # Step 3
+  run_tests         # Step 4
+  commit_changes    # Step 5
+  push_and_pr       # Step 6
+  wait_for_approval # Step 7
+  merge_pr          # Step 8
+
+  echo ""
+  ok "Done! Issue #$ISSUE_NUM has been resolved."
 }
 
 main "$@"
