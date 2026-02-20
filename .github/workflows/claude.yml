@@ -65,7 +65,7 @@ jobs:
             1. Create a PR with title: `fix: <description>`
             2. Add label `auto-merge` to the PR
             3. Enable auto-merge on the PR: `gh pr merge --auto --squash <pr-number>`
-            4. Comment on the original issue: "Fixed in #<pr-number> (auto-merged — small fix)"
+            4. Close the original issue with: `gh issue close <issue-number> -c "Fixed in #<pr-number> (auto-merged — small fix)"`
 
             ### MEDIUM-TO-CRITICAL (needs review)
             Criteria — ANY of these is true:
@@ -83,12 +83,14 @@ jobs:
             2. Add label `needs-review` to the PR
             3. Do NOT request reviewers manually — the auto-assign workflow handles it
             4. In the PR body, include:
+               - `Closes #<issue-number>` (MUST be on its own line so GitHub auto-closes the issue on merge)
                - **Impact Assessment**: What parts of the system are affected
                - **Files Changed**: List with brief explanation of each change
                - **Test Results**: Full test output summary
                - **Risk Level**: Medium / High / Critical with reasoning
             5. Comment on the original issue: "PR #<pr-number> created — needs review (@ashcastelinocs124)"
-            6. Do NOT merge. Wait for human approval.
+            6. Do NOT merge. Do NOT close the issue. Wait for human approval.
+               The issue will be closed automatically when the PR is merged (use `Closes #<issue-number>` in the PR body).
 
             ## Project Conventions
             - Read aegis/CLAUDE.md for full project context
