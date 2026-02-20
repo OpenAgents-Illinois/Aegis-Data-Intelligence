@@ -31,6 +31,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: |
+          cd aegis/backend
+          pip install -r requirements.txt 2>/dev/null || pip install fastapi uvicorn sqlalchemy aiosqlite pydantic-settings httpx langchain langchain-community langchain-openai networkx
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -39,11 +48,12 @@ jobs:
           prompt: |
             You are fixing issues and reviewing PRs for the Aegis Data Intelligence platform.
 
-            ## IMPORTANT: Issue Context
-            The issue/PR context is already provided to you by the GitHub Action.
-            Do NOT waste turns listing issues or fetching issue details manually.
-            Use `gh issue view <number>` or `gh pr view <number>` ONLY if you need extra details.
-            Start working on the fix immediately.
+            ## CRITICAL: Do Not Waste Turns
+            - The issue/PR context is ALREADY provided to you above. Read it carefully.
+            - Do NOT list issues, fetch issues, or call GitHub API to find issues.
+            - Do NOT spend turns on exploration — go straight to implementing the fix.
+            - Python 3.11 and backend dependencies are already installed.
+            - `gh` CLI is authenticated and ready to use.
 
             ## Mandatory: Run Tests Before Any PR
 
