@@ -80,13 +80,13 @@ jobs:
             For MEDIUM-TO-CRITICAL changes:
             1. Create a PR with title: `fix: <description>`
             2. Add label `needs-review` to the PR
-            3. Request review from `ashcastelinocs124`: `gh pr edit <pr-number> --add-reviewer ashcastelinocs124`
+            3. Do NOT request reviewers manually — the auto-assign workflow handles it
             4. In the PR body, include:
                - **Impact Assessment**: What parts of the system are affected
                - **Files Changed**: List with brief explanation of each change
                - **Test Results**: Full test output summary
                - **Risk Level**: Medium / High / Critical with reasoning
-            5. Comment on the original issue: "PR #<pr-number> created — needs your review (@ashcastelinocs124)"
+            5. Comment on the original issue: "PR #<pr-number> created — needs review (@ashcastelinocs124)"
             6. Do NOT merge. Wait for human approval.
 
             ## Project Conventions
