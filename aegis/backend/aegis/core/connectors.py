@@ -10,6 +10,15 @@ from sqlalchemy import create_engine, text
 
 logger = logging.getLogger("aegis.connectors")
 
+# SQLAlchemy-compatible warehouses (dialect names used in connection_uri and API).
+# Install optional drivers: pip install -e ".[snowflake]" or ".[bigquery]" or ".[databricks]"
+SUPPORTED_WAREHOUSE_DIALECTS = (
+    "postgresql",   # built-in; also "postgres"
+    "snowflake",    # snowflake-sqlalchemy
+    "bigquery",     # sqlalchemy-bigquery
+    "databricks",   # databricks-sql-connector (discovery only; no query-log extractor yet)
+)
+
 
 class WarehouseConnector:
     """Connects to a warehouse and executes queries via SQLAlchemy."""

@@ -62,11 +62,16 @@ curl -X POST http://localhost:8000/api/v1/connections/1/test
 curl -X POST http://localhost:8000/api/v1/connections/1/discover
 ```
 
-## Supported Warehouses
+## Supported Warehouses (SQLAlchemy-compatible)
 
-- PostgreSQL
-- Snowflake
-- BigQuery
+| Warehouse   | Dialect      | Optional install        |
+|------------|--------------|-------------------------|
+| PostgreSQL | `postgresql` | (built-in)              |
+| Snowflake  | `snowflake`  | `pip install -e ".[snowflake]"` |
+| BigQuery   | `bigquery`   | `pip install -e ".[bigquery]"`  |
+| Databricks | `databricks` | `pip install -e ".[databricks]"` |
+
+Discovery and monitoring work with any of these. Query-log lineage extractors exist for PostgreSQL, Snowflake, and BigQuery only. Canonical list: `aegis/backend/aegis/core/connectors.py` → `SUPPORTED_WAREHOUSE_DIALECTS`.
 
 ## Tech Stack
 
