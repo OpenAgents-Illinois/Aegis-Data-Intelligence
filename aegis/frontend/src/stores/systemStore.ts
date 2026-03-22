@@ -1,3 +1,4 @@
+import axios from "axios";
 import { create } from "zustand";
 import type { Stats } from "../api/types";
 import { getStats, getStatus } from "../api/endpoints";
@@ -6,8 +7,8 @@ interface SystemState {
   stats: Stats | null;
   llmEnabled: boolean | null;
   loading: boolean;
-  fetchStats: () => Promise<void>;
-  fetchStatus: () => Promise<void>;
+  fetchStats: (signal?: AbortSignal) => Promise<void>;
+  fetchStatus: (signal?: AbortSignal) => Promise<void>;
 }
 
 export const useSystemStore = create<SystemState>((set) => ({
@@ -15,22 +16,24 @@ export const useSystemStore = create<SystemState>((set) => ({
   llmEnabled: null,
   loading: false,
 
-  fetchStats: async () => {
+  fetchStats: async (signal) => {
     set({ loading: true });
     try {
-      const data = await getStats();
+      const data = await getStats(signal);
       set({ stats: data });
+    } catch (e) {
+      if (!axios.isCancel(e)) throw e;
     } finally {
       set({ loading: false });
     }
   },
 
-  fetchStatus: async () => {
+  fetchStatus: async (signal) => {
     try {
-      const data = await getStatus();
+      const data = await getStatus(signal);
       set({ llmEnabled: data.llm_enabled });
     } catch {
-      // Non-fatal — banner simply won't show if status is unreachable
+      // Non-fatal — includes CanceledError
     }
   },
 }));
