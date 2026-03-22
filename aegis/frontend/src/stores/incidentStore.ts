@@ -1,3 +1,4 @@
+import axios from "axios";
 import { create } from "zustand";
 import type { Incident } from "../api/types";
 import { getIncidents, getIncident } from "../api/endpoints";
@@ -6,31 +7,35 @@ interface IncidentState {
   incidents: Incident[];
   current: Incident | null;
   loading: boolean;
-  fetchIncidents: (params?: { status?: string; severity?: string }) => Promise<void>;
-  fetchIncident: (id: number) => Promise<void>;
+  fetchIncidents: (params?: { status?: string; severity?: string }, signal?: AbortSignal) => Promise<void>;
+  fetchIncident: (id: number, signal?: AbortSignal) => Promise<void>;
   updateIncident: (incident: Incident) => void;
 }
 
-export const useIncidentStore = create<IncidentState>((set, get) => ({
+export const useIncidentStore = create<IncidentState>((set) => ({
   incidents: [],
   current: null,
   loading: false,
 
-  fetchIncidents: async (params) => {
+  fetchIncidents: async (params, signal) => {
     set({ loading: true });
     try {
-      const data = await getIncidents(params);
+      const data = await getIncidents(params, signal);
       set({ incidents: data });
+    } catch (e) {
+      if (!axios.isCancel(e)) throw e;
     } finally {
       set({ loading: false });
     }
   },
 
-  fetchIncident: async (id) => {
+  fetchIncident: async (id, signal) => {
     set({ loading: true });
     try {
-      const data = await getIncident(id);
+      const data = await getIncident(id, signal);
       set({ current: data });
+    } catch (e) {
+      if (!axios.isCancel(e)) throw e;
     } finally {
       set({ loading: false });
     }
