@@ -46,4 +46,11 @@ describe("incidentStore", () => {
     expect(useIncidentStore.getState().current).toBeNull();
     expect(useIncidentStore.getState().loading).toBe(false);
   });
+
+  it("rethrows non-cancel errors from fetchIncident", async () => {
+    const networkError = new Error("Network Error");
+    vi.mocked(getIncident).mockRejectedValue(networkError);
+    await expect(useIncidentStore.getState().fetchIncident(1)).rejects.toThrow("Network Error");
+    expect(useIncidentStore.getState().loading).toBe(false);
+  });
 });

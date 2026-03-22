@@ -9,12 +9,12 @@ vi.mock("../../api/endpoints", () => ({
 
 import { getStats, getStatus } from "../../api/endpoints";
 
-beforeEach(() => {
-  useSystemStore.setState({ stats: null, llmEnabled: null, loading: false });
-  vi.clearAllMocks();
-});
-
 describe("systemStore", () => {
+  beforeEach(() => {
+    useSystemStore.setState({ stats: null, llmEnabled: null, loading: false });
+    vi.clearAllMocks();
+  });
+
   it("forwards signal to getStats", async () => {
     vi.mocked(getStats).mockResolvedValue({ health_score: 99, total_tables: 1, healthy_tables: 1, open_incidents: 0, critical_incidents: 0, anomalies_24h: 0, avg_resolution_time_minutes: null });
     const controller = new AbortController();
@@ -29,6 +29,13 @@ describe("systemStore", () => {
     controller.abort();
     await useSystemStore.getState().fetchStats(controller.signal);
     expect(useSystemStore.getState().stats).toBeNull();
+    expect(useSystemStore.getState().loading).toBe(false);
+  });
+
+  it("rethrows non-cancel errors from fetchStats", async () => {
+    const networkError = new Error("Network Error");
+    vi.mocked(getStats).mockRejectedValue(networkError);
+    await expect(useSystemStore.getState().fetchStats()).rejects.toThrow("Network Error");
     expect(useSystemStore.getState().loading).toBe(false);
   });
 
