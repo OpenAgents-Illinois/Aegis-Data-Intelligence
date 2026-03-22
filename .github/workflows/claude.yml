@@ -52,7 +52,11 @@ jobs:
             If the context is a pull request (not an issue), you MUST perform a CODE REVIEW only:
             1. Read the PR title, body, and all changed files.
             2. Write a concise review: summary, what looks good, and any suggestions or concerns (bugs, style, tests, security).
-            3. Submit the review with: `gh pr review ${{ github.event.issue.number || github.event.pull_request.number }} --comment -b "YOUR_REVIEW_TEXT"` (use the correct PR number from context). Use APPROVE if no blocking issues, or REQUEST_CHANGES with clear reasons.
+            3. Submit the review using the correct flag based on your verdict:
+               - No blocking issues → `gh pr review <PR_NUMBER> --approve -b "YOUR_REVIEW_TEXT"`
+               - Blocking issues found → `gh pr review <PR_NUMBER> --request-changes -b "YOUR_REVIEW_TEXT"`
+               - Uncertain / needs discussion → `gh pr review <PR_NUMBER> --comment -b "YOUR_REVIEW_TEXT"`
+               Use the PR number from context (github.event.issue.number for issue_comment events, github.event.pull_request.number for pull_request_review events).
             4. Do NOT push commits, modify code, or run tests when the trigger is a PR — only post the review and stop.
 
             ## CRITICAL: Do Not Waste Turns
