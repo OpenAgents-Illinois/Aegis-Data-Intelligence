@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useIncidentStore } from "../stores/incidentStore";
 import { approveIncident, dismissIncident, getIncidentReport } from "../api/endpoints";
@@ -8,6 +8,13 @@ import SqlBlock from "../components/SqlBlock";
 import BlastRadiusGraph from "../components/BlastRadiusGraph";
 
 export default function IncidentDetail() {
+  const controllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    controllerRef.current = new AbortController();
+    return () => controllerRef.current!.abort();
+  }, []);
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { current: incident, fetchIncident, loading } = useIncidentStore();
@@ -17,8 +24,10 @@ export default function IncidentDetail() {
 
   useEffect(() => {
     if (id) {
-      fetchIncident(Number(id));
-      getIncidentReport(Number(id)).then(setReport).catch(() => setReport(null));
+      fetchIncident(Number(id), controllerRef.current?.signal);
+      getIncidentReport(Number(id), controllerRef.current?.signal)
+        .then(setReport)
+        .catch(() => setReport(null));
     }
   }, [id, fetchIncident]);
 

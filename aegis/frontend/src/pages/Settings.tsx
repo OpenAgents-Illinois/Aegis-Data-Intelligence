@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getConnections, deleteConnection, triggerScan } from "../api/endpoints";
 import { useTableStore } from "../stores/tableStore";
 import ConnectionForm from "../components/ConnectionForm";
@@ -41,14 +41,17 @@ export default function Settings() {
 function ConnectionsTab() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const controllerRef = useRef<AbortController | null>(null);
 
   const load = async () => {
-    const data = await getConnections();
+    const data = await getConnections().catch(() => [] as Connection[]);
     setConnections(data);
   };
 
   useEffect(() => {
-    load();
+    controllerRef.current = new AbortController();
+    getConnections(controllerRef.current.signal).then(setConnections).catch(() => {});
+    return () => controllerRef.current!.abort();
   }, []);
 
   const handleDelete = async (id: number) => {
@@ -113,9 +116,12 @@ function ConnectionsTab() {
 
 function TablesTab() {
   const { tables, fetchTables } = useTableStore();
+  const controllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    fetchTables();
+    controllerRef.current = new AbortController();
+    fetchTables(undefined, controllerRef.current.signal);
+    return () => controllerRef.current!.abort();
   }, [fetchTables]);
 
   return (

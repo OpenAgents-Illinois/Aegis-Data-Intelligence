@@ -1,10 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLineageStore } from "../stores/lineageStore";
 import { getConnections } from "../api/endpoints";
 import type { Connection } from "../api/types";
 import LineageGraphComponent from "../components/LineageGraph";
 
 export default function LineageExplorer() {
+  const controllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    controllerRef.current = new AbortController();
+    return () => controllerRef.current!.abort();
+  }, []);
+
   const { graph, loading, fetchGraph } = useLineageStore();
   const [search, setSearch] = useState("");
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -12,11 +19,11 @@ export default function LineageExplorer() {
   const [selectedConnectionId, setSelectedConnectionId] = useState<number | undefined>(undefined);
 
   useEffect(() => {
-    getConnections().then(setConnections).catch(() => {});
+    getConnections(controllerRef.current?.signal).then(setConnections).catch(() => {});
   }, []);
 
   useEffect(() => {
-    fetchGraph(selectedConnectionId);
+    fetchGraph(selectedConnectionId, controllerRef.current?.signal);
   }, [selectedConnectionId, fetchGraph]);
 
   const filteredHighlight = search.trim()

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { clsx } from "clsx";
 import { useSystemStore } from "../stores/systemStore";
@@ -18,10 +18,17 @@ export default function Overview() {
   const { incidents, fetchIncidents } = useIncidentStore();
   const { tables, fetchTables } = useTableStore();
 
+  const controllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    controllerRef.current = new AbortController();
+    return () => controllerRef.current!.abort();
+  }, []);
+
   useAutoRefresh(() => {
-    fetchStats();
-    fetchIncidents();
-    fetchTables();
+    fetchStats(controllerRef.current?.signal);
+    fetchIncidents(undefined, controllerRef.current?.signal);
+    fetchTables(undefined, controllerRef.current?.signal);
   }, 30_000);
 
   const handleWsMessage = useCallback(
@@ -30,11 +37,11 @@ export default function Overview() {
         event.event === "incident.created" ||
         event.event === "incident.updated"
       ) {
-        fetchIncidents();
-        fetchStats();
+        fetchIncidents(undefined, controllerRef.current?.signal);
+        fetchStats(controllerRef.current?.signal);
       }
       if (event.event === "scan.completed") {
-        fetchStats();
+        fetchStats(controllerRef.current?.signal);
       }
     },
     [fetchIncidents, fetchStats]
