@@ -74,6 +74,11 @@ class LLMClient:
 
         Returns parsed diagnosis dict or None if all retries fail.
         """
+        try:
+            _ = self.client
+        except ValueError:
+            return None
+
         backoff_delays = [2, 4, 8]
 
         for attempt, delay in enumerate(backoff_delays):

@@ -15,9 +15,13 @@ const monitoringNav = [
   { to: "/lineage", label: "Lineage Explorer", icon: "M4 6h16M4 10h16M4 14h16M4 18h16" },
 ];
 
+// Shell layout for all dashboard pages — sidebar nav + top bar + content area.
+// Fetches system status on mount to determine if LLM is enabled (shows a
+// warning banner when OPENAI_API_KEY is not set).
 export default function Layout({ children }: { children: ReactNode }) {
   const { stats, llmEnabled, fetchStatus } = useSystemStore();
 
+  // Fetch /status once on mount to check if LLM agents are available
   useEffect(() => {
     fetchStatus();
   }, [fetchStatus]);

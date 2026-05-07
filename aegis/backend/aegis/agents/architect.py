@@ -137,17 +137,76 @@ class Architect:
             except Exception:
                 pass
 
+        recommendations = self._generate_schema_recommendations(anomaly, table_name)
+
         return Diagnosis(
-            root_cause="Automated analysis unavailable. Manual investigation required.",
+            root_cause=self._generate_root_cause(anomaly, table_name),
             root_cause_table=table_name,
             blast_radius=blast_radius,
             severity=anomaly.severity,
-            confidence=0.0,
-            recommendations=[
-                Recommendation(
-                    action="investigate",
-                    description="Check upstream tables for recent changes",
-                    priority=1,
-                )
-            ],
+            confidence=0.6,
+            recommendations=recommendations,
         )
+
+    def _generate_root_cause(self, anomaly: AnomalyModel, table_name: str) -> str:
+        if anomaly.type != "schema_drift":
+            return f"Freshness SLA breach on {table_name}. The table has not been updated within its expected window."
+
+        detail = json.loads(anomaly.detail)
+        changes = detail if isinstance(detail, list) else detail.get("changes", [])
+        parts = []
+        for c in changes:
+            kind = c.get("change", "unknown")
+            col = c.get("column", "?")
+            if kind == "type_changed":
+                parts.append(f"Column '{col}' type changed from {c.get('old_type')} to {c.get('new_type')}")
+            elif kind == "column_deleted":
+                parts.append(f"Column '{col}' was deleted")
+            elif kind == "column_added":
+                parts.append(f"Column '{col}' was added")
+        return f"Schema drift on {table_name}: " + "; ".join(parts) if parts else f"Schema drift detected on {table_name}"
+
+    def _generate_schema_recommendations(self, anomaly: AnomalyModel, table_name: str) -> list[Recommendation]:
+        if anomaly.type != "schema_drift":
+            return [Recommendation(action="investigate", description="Check upstream pipeline for delays or failures", priority=1)]
+
+        detail = json.loads(anomaly.detail)
+        changes = detail if isinstance(detail, list) else detail.get("changes", [])
+        recs = []
+        priority = 1
+        schema, tbl = table_name.split(".") if "." in table_name else ("public", table_name)
+
+        for c in changes:
+            kind = c.get("change", "unknown")
+            col = c.get("column", "?")
+            if kind == "type_changed":
+                old_type = c.get("old_type", "unknown")
+                recs.append(Recommendation(
+                    action="revert_type",
+                    description=f"Revert {col} back to {old_type}",
+                    sql=f"ALTER TABLE {table_name} ALTER COLUMN {col} TYPE {old_type} USING {col}::{old_type};",
+                    priority=priority,
+                ))
+            elif kind == "column_deleted":
+                old_col = c.get("old", {})
+                col_type = old_col.get("type", "TEXT")
+                nullable = old_col.get("nullable", True)
+                null_clause = "" if nullable else " NOT NULL"
+                recs.append(Recommendation(
+                    action="restore_column",
+                    description=f"Restore deleted column '{col}'",
+                    sql=f"ALTER TABLE {table_name} ADD COLUMN {col} {col_type.upper()}{null_clause};",
+                    priority=priority,
+                ))
+            elif kind == "column_added":
+                recs.append(Recommendation(
+                    action="review_addition",
+                    description=f"Review new column '{col}' — verify downstream queries are updated",
+                    priority=priority + 10,
+                ))
+            priority += 1
+
+        if not recs:
+            recs.append(Recommendation(action="investigate", description="Check upstream tables for recent changes", priority=1))
+
+        return recs

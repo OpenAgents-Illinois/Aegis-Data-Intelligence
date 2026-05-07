@@ -1,19 +1,23 @@
 """Incident listing, detail, approval, and dismissal endpoints."""
 
+import asyncio
 import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from aegis.api.deps import get_db, verify_api_key
 from aegis.core.models import (
+    AnomalyModel,
+    ConnectionModel,
     IncidentApprove,
     IncidentDismiss,
     IncidentModel,
     IncidentResponse,
+    MonitoredTableModel,
 )
 from aegis.services.notifier import notifier
 
@@ -78,6 +82,37 @@ async def approve_incident(
     incident = await db.get(IncidentModel, incident_id)
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
+
+    # Auto-execute remediation SQL for high/critical incidents
+    if incident.severity in ("high", "critical") and incident.remediation:
+        remediation = json.loads(incident.remediation)
+
+        # Resolve warehouse connector: incident → anomaly → table → connection
+        anomaly = await db.get(AnomalyModel, incident.anomaly_id)
+        table = await db.get(MonitoredTableModel, anomaly.table_id)
+        connection = await db.get(ConnectionModel, table.connection_id)
+
+        from aegis.core.connectors import WarehouseConnector
+        connector = WarehouseConnector(connection.connection_uri, connection.dialect)
+
+        for action in remediation.get("actions", []):
+            sql = action.get("sql")
+            if sql and action.get("status") == "pending_approval":
+                try:
+                    with connector._engine.connect() as conn:
+                        conn.execute(text(sql))
+                        conn.commit()
+                    action["status"] = "executed"
+                except Exception as e:
+                    action["status"] = "failed"
+                    action["error"] = str(e)
+
+        connector.dispose()
+        incident.remediation = json.dumps(remediation)
+
+        # Trigger rescan so sentinels confirm the fix
+        from aegis.services.scanner import run_manual_scan
+        await asyncio.to_thread(run_manual_scan)
 
     incident.status = "resolved"
     incident.resolved_at = datetime.now(timezone.utc)

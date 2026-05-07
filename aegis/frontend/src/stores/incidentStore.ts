@@ -3,12 +3,15 @@ import { create } from "zustand";
 import type { Incident } from "../api/types";
 import { getIncidents, getIncident } from "../api/endpoints";
 
+// Zustand store for incident data. Two slots:
+// - `incidents[]` — list used by the Overview feed and any filtered views
+// - `current` — single incident loaded for the IncidentDetail page
 interface IncidentState {
   incidents: Incident[];
   current: Incident | null;
   loading: boolean;
-  fetchIncidents: (params?: { status?: string; severity?: string }, signal?: AbortSignal) => Promise<void>;
-  fetchIncident: (id: number, signal?: AbortSignal) => Promise<void>;
+  fetchIncidents: (params?: { status?: string; severity?: string }) => Promise<void>;
+  fetchIncident: (id: number) => Promise<void>;
   updateIncident: (incident: Incident) => void;
 }
 

@@ -12,8 +12,16 @@ import TimelineChart from "../components/TimelineChart";
 import { triggerScan } from "../api/endpoints";
 import type { WsEvent } from "../api/types";
 
+// Main dashboard page — shows health score, monitoring timeline,
+// recent incidents feed, and freshness heatmap. Auto-refreshes every
+// 30 seconds and listens for WebSocket events for real-time updates.
 export default function Overview() {
   const navigate = useNavigate();
+
+  // Three Zustand stores power the dashboard:
+  // - systemStore: health_score, total_tables, open_incidents, etc.
+  // - incidentStore: list of recent incidents for the feed
+  // - tableStore: monitored tables for the freshness heatmap
   const { stats, fetchStats } = useSystemStore();
   const { incidents, fetchIncidents } = useIncidentStore();
   const { tables, fetchTables } = useTableStore();
@@ -25,23 +33,26 @@ export default function Overview() {
     return () => controllerRef.current!.abort();
   }, []);
 
+  // Poll every 30 seconds — fetches stats, incidents, and tables
   useAutoRefresh(() => {
-    fetchStats(controllerRef.current?.signal);
-    fetchIncidents(undefined, controllerRef.current?.signal);
-    fetchTables(undefined, controllerRef.current?.signal);
+    fetchStats();
+    fetchIncidents();
+    fetchTables();
   }, 30_000);
 
+  // WebSocket handler — re-fetch on real-time incident or scan events
+  // so the dashboard updates immediately without waiting for the next poll
   const handleWsMessage = useCallback(
     (event: WsEvent) => {
       if (
         event.event === "incident.created" ||
         event.event === "incident.updated"
       ) {
-        fetchIncidents(undefined, controllerRef.current?.signal);
-        fetchStats(controllerRef.current?.signal);
+        fetchIncidents();
+        fetchStats();
       }
       if (event.event === "scan.completed") {
-        fetchStats(controllerRef.current?.signal);
+        fetchStats();
       }
     },
     [fetchIncidents, fetchStats]
