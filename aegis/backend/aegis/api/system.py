@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,6 +93,34 @@ async def stats(db: AsyncSession = Depends(get_db)):
         anomalies_24h=anomalies_24h,
         avg_resolution_time_minutes=avg_resolution_minutes,
     )
+
+
+@router.get("/stats/anomalies/timeline", dependencies=[Depends(verify_api_key)])
+async def anomalies_timeline(
+    hours: int = Query(24, ge=1, le=168),
+    db: AsyncSession = Depends(get_db),
+):
+    """Hourly bucket counts of anomalies over the last `hours` hours."""
+    now_hour = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    window_start = now_hour - timedelta(hours=hours - 1)
+
+    result = await db.execute(
+        select(AnomalyModel.detected_at).where(AnomalyModel.detected_at >= window_start)
+    )
+    buckets: dict[datetime, int] = {
+        window_start + timedelta(hours=i): 0 for i in range(hours)
+    }
+    for (ts,) in result.all():
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        bucket = ts.replace(minute=0, second=0, microsecond=0)
+        if bucket in buckets:
+            buckets[bucket] += 1
+
+    return [
+        {"hour_start": ts.isoformat(), "count": count}
+        for ts, count in sorted(buckets.items())
+    ]
 
 
 @router.post("/scan/trigger", dependencies=[Depends(verify_api_key)])

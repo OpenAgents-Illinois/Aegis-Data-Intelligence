@@ -170,6 +170,9 @@ class FreshnessSentinel:
         if last_update.tzinfo is None:
             last_update = last_update.replace(tzinfo=timezone.utc)
 
+        table.last_observed_at = last_update
+        db.flush()
+
         minutes_since = (now - last_update).total_seconds() / 60
 
         if minutes_since <= table.freshness_sla_minutes:
