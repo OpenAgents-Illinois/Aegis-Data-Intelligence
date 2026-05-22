@@ -17,6 +17,7 @@ export interface MonitoredTable {
   fully_qualified_name: string;
   check_types: string[];
   freshness_sla_minutes: number | null;
+  last_observed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -107,6 +108,11 @@ export interface Stats {
   critical_incidents: number;
   anomalies_24h: number;
   avg_resolution_time_minutes: number | null;
+}
+
+export interface AnomalyTimelineBucket {
+  hour_start: string;
+  count: number;
 }
 
 export interface AnomalyDetail {

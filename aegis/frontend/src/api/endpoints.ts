@@ -1,5 +1,6 @@
 import client from "./client";
 import type {
+  AnomalyTimelineBucket,
   Connection,
   Incident,
   IncidentReport,
@@ -93,6 +94,14 @@ export const getBlastRadius = (table: string) =>
 // --- System ---
 export const getStats = () =>
   client.get<Stats>("/stats").then((r) => r.data);
+
+export const getAnomalyTimeline = (hours = 24, signal?: AbortSignal) =>
+  client
+    .get<AnomalyTimelineBucket[]>("/stats/anomalies/timeline", {
+      params: { hours },
+      signal,
+    })
+    .then((r) => r.data);
 
 export const getHealth = () =>
   client.get<{ status: string }>("/health").then((r) => r.data);

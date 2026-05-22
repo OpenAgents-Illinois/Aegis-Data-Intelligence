@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { clsx } from "clsx";
 import { useSystemStore } from "../stores/systemStore";
@@ -14,7 +14,7 @@ import type { WsEvent } from "../api/types";
 
 export default function Overview() {
   const navigate = useNavigate();
-  const { stats, fetchStats } = useSystemStore();
+  const { stats, timeline, fetchStats, fetchTimeline } = useSystemStore();
   const { incidents, fetchIncidents } = useIncidentStore();
   const { tables, fetchTables } = useTableStore();
 
@@ -27,6 +27,7 @@ export default function Overview() {
 
   useAutoRefresh(() => {
     fetchStats(controllerRef.current?.signal);
+    fetchTimeline(controllerRef.current?.signal);
     fetchIncidents(undefined, controllerRef.current?.signal);
     fetchTables(undefined, controllerRef.current?.signal);
   }, 30_000);
@@ -39,21 +40,29 @@ export default function Overview() {
       ) {
         fetchIncidents(undefined, controllerRef.current?.signal);
         fetchStats(controllerRef.current?.signal);
+        fetchTimeline(controllerRef.current?.signal);
       }
       if (event.event === "scan.completed") {
         fetchStats(controllerRef.current?.signal);
+        fetchTimeline(controllerRef.current?.signal);
       }
     },
-    [fetchIncidents, fetchStats]
+    [fetchIncidents, fetchStats, fetchTimeline]
   );
 
   useWebSocket(handleWsMessage);
 
-  // Placeholder timeline
-  const timelineData = Array.from({ length: 24 }, (_, i) => ({
-    hour: `${String(i).padStart(2, "0")}:00`,
-    count: Math.floor(Math.random() * 5),
-  }));
+  const timelineData = useMemo(
+    () =>
+      timeline.map((b) => {
+        const d = new Date(b.hour_start);
+        return {
+          hour: `${String(d.getHours()).padStart(2, "0")}:00`,
+          count: b.count,
+        };
+      }),
+    [timeline]
+  );
 
   const healthScore = stats?.health_score ?? 100;
   const healthColor =

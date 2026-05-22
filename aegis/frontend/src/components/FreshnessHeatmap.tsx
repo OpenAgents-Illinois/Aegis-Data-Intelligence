@@ -15,16 +15,23 @@ interface Props {
 }
 
 export default function FreshnessHeatmap({ tables }: Props) {
-  const data = tables
-    .filter((t) => t.freshness_sla_minutes)
-    .map((t) => ({
-      name:
-        t.table_name.length > 20
-          ? t.table_name.slice(0, 18) + "..."
-          : t.table_name,
-      sla: t.freshness_sla_minutes!,
-      ratio: Math.random() * 2,
-    }))
+  const now = Date.now();
+  const observable = tables.filter(
+    (t) => t.freshness_sla_minutes && t.last_observed_at,
+  );
+  const data = observable
+    .map((t) => {
+      const ageMinutes =
+        (now - new Date(t.last_observed_at!).getTime()) / 60_000;
+      return {
+        name:
+          t.table_name.length > 20
+            ? t.table_name.slice(0, 18) + "..."
+            : t.table_name,
+        sla: t.freshness_sla_minutes!,
+        ratio: ageMinutes / t.freshness_sla_minutes!,
+      };
+    })
     .slice(0, 12);
 
   const getColor = (ratio: number) => {
@@ -33,10 +40,13 @@ export default function FreshnessHeatmap({ tables }: Props) {
     return "#ef4444";
   };
 
+  const slaConfigured = tables.filter((t) => t.freshness_sla_minutes).length;
   if (data.length === 0) {
     return (
       <div className="text-center py-8 text-gray-400 text-sm">
-        No tables with freshness SLA configured
+        {slaConfigured === 0
+          ? "No tables with freshness SLA configured"
+          : "Waiting for first freshness observation…"}
       </div>
     );
   }
