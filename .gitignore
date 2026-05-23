@@ -38,6 +38,8 @@ node_modules/
 
 # Data
 *.db
+*.db-shm
+*.db-wal
 
 # OS
 .DS_Store

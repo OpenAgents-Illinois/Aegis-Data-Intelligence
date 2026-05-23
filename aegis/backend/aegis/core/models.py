@@ -65,6 +65,7 @@ class MonitoredTableModel(Base):
         Text, default='["schema", "freshness"]', nullable=False
     )
     freshness_sla_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_observed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
@@ -222,6 +223,7 @@ class TableResponse(BaseModel):
     fully_qualified_name: str
     check_types: list[str]
     freshness_sla_minutes: int | None
+    last_observed_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -237,6 +239,7 @@ class TableResponse(BaseModel):
             fully_qualified_name=obj.fully_qualified_name,
             check_types=json.loads(obj.check_types),
             freshness_sla_minutes=obj.freshness_sla_minutes,
+            last_observed_at=obj.last_observed_at,
             created_at=obj.created_at,
             updated_at=obj.updated_at,
         )

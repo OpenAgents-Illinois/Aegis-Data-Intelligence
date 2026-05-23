@@ -138,3 +138,43 @@ class TestFreshnessSentinel:
 
         assert result is not None
         assert result.severity == "critical"
+
+    def test_records_last_observed_at_when_fresh(self, db, sample_table):
+        """Successful observation updates last_observed_at even when within SLA."""
+        last_update = datetime.now(timezone.utc) - timedelta(minutes=30)
+        connector = MagicMock()
+        connector.fetch_last_update_time.return_value = last_update
+
+        sentinel = FreshnessSentinel()
+        sentinel.inspect(sample_table, connector, db)
+        db.refresh(sample_table)
+
+        assert sample_table.last_observed_at is not None
+        observed = sample_table.last_observed_at
+        if observed.tzinfo is None:
+            observed = observed.replace(tzinfo=timezone.utc)
+        assert abs((observed - last_update).total_seconds()) < 1
+
+    def test_records_last_observed_at_when_stale(self, db, sample_table):
+        """Violation also records the observation timestamp."""
+        last_update = datetime.now(timezone.utc) - timedelta(minutes=90)
+        connector = MagicMock()
+        connector.fetch_last_update_time.return_value = last_update
+
+        sentinel = FreshnessSentinel()
+        result = sentinel.inspect(sample_table, connector, db)
+        db.refresh(sample_table)
+
+        assert result is not None
+        assert sample_table.last_observed_at is not None
+
+    def test_no_warehouse_timestamp_leaves_last_observed_at_unchanged(self, db, sample_table):
+        """When the warehouse can't supply a timestamp, last_observed_at is not touched."""
+        connector = MagicMock()
+        connector.fetch_last_update_time.return_value = None
+
+        sentinel = FreshnessSentinel()
+        sentinel.inspect(sample_table, connector, db)
+        db.refresh(sample_table)
+
+        assert sample_table.last_observed_at is None

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { clsx } from "clsx";
 import { useSystemStore } from "../stores/systemStore";
@@ -17,12 +17,11 @@ import type { WsEvent } from "../api/types";
 // 30 seconds and listens for WebSocket events for real-time updates.
 export default function Overview() {
   const navigate = useNavigate();
-
   // Three Zustand stores power the dashboard:
   // - systemStore: health_score, total_tables, open_incidents, etc.
   // - incidentStore: list of recent incidents for the feed
   // - tableStore: monitored tables for the freshness heatmap
-  const { stats, fetchStats } = useSystemStore();
+  const { stats, timeline, fetchStats, fetchTimeline } = useSystemStore();
   const { incidents, fetchIncidents } = useIncidentStore();
   const { tables, fetchTables } = useTableStore();
 
@@ -35,9 +34,10 @@ export default function Overview() {
 
   // Poll every 30 seconds — fetches stats, incidents, and tables
   useAutoRefresh(() => {
-    fetchStats();
-    fetchIncidents();
-    fetchTables();
+    fetchStats(controllerRef.current?.signal);
+    fetchTimeline(controllerRef.current?.signal);
+    fetchIncidents(undefined, controllerRef.current?.signal);
+    fetchTables(undefined, controllerRef.current?.signal);
   }, 30_000);
 
   // WebSocket handler — re-fetch on real-time incident or scan events
@@ -48,23 +48,31 @@ export default function Overview() {
         event.event === "incident.created" ||
         event.event === "incident.updated"
       ) {
-        fetchIncidents();
-        fetchStats();
+        fetchIncidents(undefined, controllerRef.current?.signal);
+        fetchStats(controllerRef.current?.signal);
+        fetchTimeline(controllerRef.current?.signal);
       }
       if (event.event === "scan.completed") {
-        fetchStats();
+        fetchStats(controllerRef.current?.signal);
+        fetchTimeline(controllerRef.current?.signal);
       }
     },
-    [fetchIncidents, fetchStats]
+    [fetchIncidents, fetchStats, fetchTimeline]
   );
 
   useWebSocket(handleWsMessage);
 
-  // Placeholder timeline
-  const timelineData = Array.from({ length: 24 }, (_, i) => ({
-    hour: `${String(i).padStart(2, "0")}:00`,
-    count: Math.floor(Math.random() * 5),
-  }));
+  const timelineData = useMemo(
+    () =>
+      timeline.map((b) => {
+        const d = new Date(b.hour_start);
+        return {
+          hour: `${String(d.getHours()).padStart(2, "0")}:00`,
+          count: b.count,
+        };
+      }),
+    [timeline]
+  );
 
   const healthScore = stats?.health_score ?? 100;
   const healthColor =
